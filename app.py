@@ -2,7 +2,7 @@ import torch
 import subprocess
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
-from compel import Compel, ReturnedEmbeddingsType
+from compel import CompelForSDXL
 from random import randint
 
 # --- 配置区 ---
@@ -26,40 +26,32 @@ if len(ollamaInfo.splitlines()) > 1:
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
-    torch_dtype=torch.float16,
+    torch_dtype=torch.float16
 )
 scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
-#pipe.enable_xformers_memory_efficient_attention() # XPU暂不支持
 pipe = pipe.to("xpu")
 
-compel = Compel(
-    tokenizer=[pipe.tokenizer, pipe.tokenizer_2],
-    text_encoder=[pipe.text_encoder, pipe.text_encoder_2],
-    returned_embeddings_type=ReturnedEmbeddingsType.PENULTIMATE_HIDDEN_STATES_NON_NORMALIZED,
-    requires_pooled=[False, True], # SDXL只在text_encoder_2需要pooled
-    device="xpu"
-)
+compel = CompelForSDXL(pipe=pipe)
 
 def draw(prompt,seed):
-    conditioning, pooled = compel(prompt) # type: ignore
-    negative_conditioning, negative_pooled = compel(negative_prompt) # type: ignore
+    conditioning = compel(prompt, negative_prompt=negative_prompt)
 
     print(f"Current seed: {seed}")
 
     image = pipe(
-        prompt_embeds=conditioning,
-        pooled_prompt_embeds=pooled, # type: ignore
-        negative_prompt_embeds=negative_conditioning,
-        negative_pooled_prompt_embeds=negative_pooled, # type: ignore
+        prompt_embeds=conditioning.embeds,
+        pooled_prompt_embeds=conditioning.pooled_embeds,
+        negative_prompt_embeds=conditioning.negative_embeds,
+        negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
         width=1024,
         height=1536,
         num_inference_steps=30,
         guidance_scale=5,
         generator=torch.Generator().manual_seed(seed),
-    ).images[0] # type: ignore
+    ).images[0] # pyright: ignore[reportAttributeAccessIssue]
     
     image.save(f"{seed}.png")
 
