@@ -15,10 +15,10 @@ hotwords = {
     }
 # --- 配置区 ---
 
-ollamaInfo = subprocess.run(ollama_path+"ollama ps", text=True, capture_output=True).stdout
-if len(ollamaInfo.splitlines()) > 1:
+ollama_info = subprocess.run(ollama_path+"ollama ps", text=True, capture_output=True).stdout
+if len(ollama_info.splitlines()) > 1:
     print("Detected Ollama's model alive, stopping...")
-    for info in ollamaInfo.splitlines()[1:]:
+    for info in ollama_info.splitlines()[1:]:
         name = info.split(' ')[0]
         subprocess.run(ollama_path+"ollama stop "+name)
         print('Stopped '+name)
