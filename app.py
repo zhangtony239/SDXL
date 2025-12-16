@@ -62,6 +62,7 @@ if __name__ == "__main__":
             break
         if len(prompt.split('seed')) > 1:
             seed = int(prompt.split('seed')[1].split(',')[0][1:])
+            prompt = prompt.split('seed')[0] + ','.join(prompt.split('seed')[1].split(',')[1:])
         else:
             seed = randint(0, 2**32 - 1)
         for word in hotwords:
