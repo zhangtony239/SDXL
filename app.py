@@ -64,7 +64,7 @@ if __name__ == "__main__":
             seed = int(prompt.split('seed')[1].split(',')[0][1:])
         else:
             seed = randint(0, 2**32 - 1)
-        for i in hotwords:
-            if i in map(str.strip,prompt.split(',')):
-                prompt = prompt.replace(i,hotwords[i])
+        for word in hotwords:
+            if word in map(str.strip,prompt.split(',')):
+                prompt = prompt.replace(word,hotwords[word])
         draw(prompt, seed)
