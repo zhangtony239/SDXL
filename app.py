@@ -5,7 +5,16 @@ from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncest
 from compel import Compel, ReturnedEmbeddingsType
 from random import randint
 
+# --- 配置区 ---
 ollama_path = "C:\\Users\\Tony\\应用\\ollama-ipex-llm\\"
+ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
+negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
+hotwords = {
+    'Airki':'1girl,white hair,blue eyes,cat ears',
+    'airki':'1girl,white hair,blue eyes,cat ears',
+    }
+# --- 配置区 ---
+
 ollamaInfo = subprocess.run(ollama_path+"ollama ps", text=True, capture_output=True).stdout
 if len(ollamaInfo.splitlines()) > 1:
     print("Detected Ollama's model alive, stopping...")
@@ -14,7 +23,6 @@ if len(ollamaInfo.splitlines()) > 1:
         subprocess.run(ollama_path+"ollama stop "+name)
         print('Stopped '+name)
 
-ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
@@ -36,8 +44,6 @@ compel = Compel(
 )
 
 def draw(prompt,seed):
-    negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
-    
     conditioning, pooled = compel(prompt) # type: ignore
     negative_conditioning, negative_pooled = compel(negative_prompt) # type: ignore
 
@@ -56,11 +62,6 @@ def draw(prompt,seed):
     ).images[0] # type: ignore
     
     image.save(f"{seed}.png")
-
-hotwords = {
-    'Airki':'1girl,white hair,blue eyes,cat ears',
-    'airki':'1girl,white hair,blue eyes,cat ears',
-    }
 
 if __name__ == "__main__":
     while True:
