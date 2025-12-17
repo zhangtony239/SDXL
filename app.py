@@ -1,5 +1,6 @@
 import torch
 import subprocess
+import numpy as np
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
 from compel import CompelForSDXL
@@ -36,6 +37,8 @@ pipe = pipe.to("xpu")
 
 compel = CompelForSDXL(pipe=pipe)
 
+MAX_SEED = np.iinfo(np.int32).max
+
 def draw(prompt,seed):
     conditioning = compel(prompt, negative_prompt=negative_prompt)
 
@@ -64,7 +67,7 @@ if __name__ == "__main__":
             seed = int(prompt.split('seed')[1].split(',')[0][1:])
             prompt = prompt.split('seed')[0] + ','.join(prompt.split('seed')[1].split(',')[1:])
         else:
-            seed = randint(0, 2**32 - 1)
+            seed = randint(0, MAX_SEED)
         for word in hotwords:
             if word in map(str.strip,prompt.split(',')):
                 prompt = prompt.replace(word,hotwords[word])
