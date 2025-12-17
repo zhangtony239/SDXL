@@ -12,6 +12,10 @@ from PIL import Image, PngImagePlugin
 import json
 import io
 
+hotwords = {
+    'Airki':'1girl,white hair,blue eyes,cat ears',
+    'airki':'1girl,white hair,blue eyes,cat ears',
+    }
 
 # Add metadata to the image
 def add_metadata_to_image(image, metadata):
@@ -83,7 +87,11 @@ def infer(
     if not use_negative_prompt:
         negative_prompt = ""
     
-    original_prompt = prompt  # Store original prompt for metadata
+    original_prompt = prompt
+
+    for word in hotwords:
+        if word in map(str.strip,prompt.split(',')):
+            prompt = prompt.replace(word,hotwords[word])
     
     conditioning = compel(prompt, negative_prompt=negative_prompt)
     
