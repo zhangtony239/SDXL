@@ -1,0 +1,217 @@
+import random
+import gradio as gr # type: ignore
+import numpy as np
+import spaces # type: ignore
+import torch
+import os
+from huggingface_hub import hf_hub_download
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
+from compel import CompelForSDXL
+from PIL import Image, PngImagePlugin
+import json
+import io
+
+
+# Add metadata to the image
+def add_metadata_to_image(image, metadata):
+    metadata_str = json.dumps(metadata)
+    
+    # Convert PIL Image to PNG with metadata
+    img_with_metadata = image.copy()
+    
+    # Create a PngInfo object and add metadata
+    png_info = PngImagePlugin.PngInfo()
+    png_info.add_text("parameters", metadata_str)
+    
+    # Save to a byte buffer with metadata
+    buffer = io.BytesIO()
+    img_with_metadata.save(buffer, format="PNG", pnginfo=png_info)
+    
+    # Reopen from buffer to get the image with metadata
+    buffer.seek(0)
+    return Image.open(buffer)
+
+if not torch.cuda.is_available():
+    DESCRIPTION = "\n<p>你现在运行在CPU上 但是此项目只支持GPU.</p>"
+
+MAX_SEED = np.iinfo(np.int32).max
+MAX_IMAGE_SIZE = 2048
+
+if torch.cuda.is_available():
+    # vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
+    model_path = hf_hub_download(
+        repo_id="dsfkjlweuyr/miaomiaoRealskin",  # 模型仓库名称（非完整URL）
+        filename="miaomiaoRealskin_vPredV11.safetensors",
+        use_auth_token=os.environ.get("HF_TOKEN") # type: ignore
+    )
+    pipe = StableDiffusionXLPipeline.from_single_file(
+        model_path,
+        #vae=vae, 内置VAE
+        use_safetensors=True,
+        torch_dtype=torch.float16,
+    )
+    scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
+    pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
+    pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
+    pipe.to("cuda")
+
+def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
+    if randomize_seed:
+        seed = random.randint(0, MAX_SEED)
+    return seed
+
+@spaces.GPU
+def infer(
+    prompt: str,
+    negative_prompt: str = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
+    use_negative_prompt: bool = True,
+    seed: int = 0,
+    width: int = 1024,
+    height: int = 1536,
+    guidance_scale: float = 5,
+    num_inference_steps: int = 30,
+    randomize_seed: bool = True,
+    use_resolution_binning: bool = True,
+    _=gr.Progress(track_tqdm=True),
+):
+    seed = int(randomize_seed_fn(seed, randomize_seed))
+    generator = torch.Generator().manual_seed(seed)
+    
+    compel = CompelForSDXL(pipe=pipe)
+    
+    if not use_negative_prompt:
+        negative_prompt = ""
+    
+    original_prompt = prompt  # Store original prompt for metadata
+    
+    conditioning = compel(prompt, negative_prompt=negative_prompt)
+    
+    # 在调用 pipe 时，使用新的参数名称（确保参数名称正确）
+    image = pipe(
+        prompt_embeds=conditioning.embeds,
+        pooled_prompt_embeds=conditioning.pooled_embeds,
+        negative_prompt_embeds=conditioning.negative_embeds,
+        negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
+        width=width,
+        height=height,
+        guidance_scale=guidance_scale,
+        num_inference_steps=num_inference_steps,
+        generator=generator,
+        use_resolution_binning=use_resolution_binning,
+    ).images[0] # pyright: ignore[reportAttributeAccessIssue]
+
+    # Create metadata dictionary
+    metadata = {
+        "prompt": original_prompt,
+        "processed_prompt": prompt,
+        "negative_prompt": negative_prompt,
+        "seed": seed,
+        "width": width,
+        "height": height,
+        "guidance_scale": guidance_scale,
+        "num_inference_steps": num_inference_steps,
+        "model": "miaomiaoRealSkin11",
+        "use_resolution_binning": use_resolution_binning,
+    }
+    # Add metadata to the image
+    image_with_metadata = add_metadata_to_image(image, metadata)
+    
+    return image_with_metadata, seed
+
+css = '''
+.gradio-container {
+    max-width: 560px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+h1{text-align:center}
+'''
+
+with gr.Blocks(css=css) as demo:
+    with gr.Group():
+        with gr.Row():
+            prompt = gr.Text(
+                label="关键词",
+                show_label=True,
+                max_lines=5,
+                placeholder="输入你要的图片关键词",
+                container=False,
+            )
+            run_button = gr.Button("生成", scale=0, variant="primary")
+        result = gr.Image(label="Result", show_label=False, format="png")
+    with gr.Accordion("高级选项", open=False):
+        with gr.Row():
+            use_negative_prompt = gr.Checkbox(label="使用反向词条", value=True)
+            negative_prompt = gr.Text(
+                label="反向词条",
+                max_lines=5,
+                lines=4,
+                placeholder="输入你要排除的图片关键词",
+                value="worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
+                visible=True,
+            )
+        seed = gr.Slider(
+            label="种子",
+            minimum=0,
+            maximum=MAX_SEED,
+            step=1,
+            value=0,
+        )
+        randomize_seed = gr.Checkbox(label="随机种子", value=True)
+        with gr.Row(visible=True):
+            width = gr.Slider(
+                label="宽度",
+                minimum=512,
+                maximum=MAX_IMAGE_SIZE,
+                step=64,
+                value=1024,
+            )
+            height = gr.Slider(
+                label="高度",
+                minimum=512,
+                maximum=MAX_IMAGE_SIZE,
+                step=64,
+                value=1536,
+            )
+        with gr.Row():
+            guidance_scale = gr.Slider(
+                label="提示词相关性",
+                minimum=0.1,
+                maximum=10,
+                step=0.1,
+                value=5.0,
+            )
+            num_inference_steps = gr.Slider(
+                label="生成步数",
+                minimum=1,
+                maximum=50,
+                step=1,
+                value=30,
+            )
+
+    use_negative_prompt.change(
+        fn=lambda x: gr.update(visible=x),
+        inputs=use_negative_prompt,
+        outputs=negative_prompt,
+    )
+
+    gr.on(
+        triggers=[prompt.submit, run_button.click],
+        fn=infer,
+        inputs=[
+            prompt,
+            negative_prompt,
+            use_negative_prompt,
+            seed,
+            width,
+            height,
+            guidance_scale,
+            num_inference_steps,
+            randomize_seed,
+        ],
+        outputs=[result, seed],
+    )
+
+if __name__ == "__main__":
+    demo.launch(ssr_mode=True)
