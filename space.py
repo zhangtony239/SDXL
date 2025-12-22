@@ -9,7 +9,6 @@ from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
 from compel import CompelForSDXL
 from PIL import Image, PngImagePlugin
-import json
 import io
 
 hotwords = {
@@ -19,20 +18,17 @@ hotwords = {
 
 # Add metadata to the image
 def add_metadata_to_image(image, metadata):
-    metadata_str = json.dumps(metadata)
+    # 构建符合 A1111 规范的字符串，这样别人下载你的图能直接“一键导入”
+    meta_text = f"{metadata['prompt']}\nNegative prompt: {metadata['negative_prompt']}\n"
+    meta_text += f"Steps: {metadata['num_inference_steps']}, Sampler: Eular A, "
+    meta_text += f"CFG scale: {metadata['guidance_scale']}, Seed: {metadata['seed']}, "
+    meta_text += f"Size: {metadata['width']}x{metadata['height']}, Model: {metadata['model']}"
     
-    # Convert PIL Image to PNG with metadata
-    img_with_metadata = image.copy()
-    
-    # Create a PngInfo object and add metadata
     png_info = PngImagePlugin.PngInfo()
-    png_info.add_text("parameters", metadata_str)
+    png_info.add_text("parameters", meta_text)
     
-    # Save to a byte buffer with metadata
     buffer = io.BytesIO()
-    img_with_metadata.save(buffer, format="PNG", pnginfo=png_info)
-    
-    # Reopen from buffer to get the image with metadata
+    image.save(buffer, format="PNG", pnginfo=png_info)
     buffer.seek(0)
     return Image.open(buffer)
 
@@ -58,6 +54,9 @@ if torch.cuda.is_available():
     scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
     pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
     pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
+    
+    # 全局初始化 Compel
+    compel = CompelForSDXL(pipe=pipe)
     pipe.to("cuda")
 
 def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
@@ -82,16 +81,15 @@ def infer(
     seed = int(randomize_seed_fn(seed, randomize_seed))
     generator = torch.Generator().manual_seed(seed)
     
-    compel = CompelForSDXL(pipe=pipe)
-    
     if not use_negative_prompt:
         negative_prompt = ""
     
     original_prompt = prompt
 
-    for word in hotwords:
-        if word in map(str.strip,prompt.split(',')):
-            prompt = prompt.replace(word,hotwords[word])
+    # 改进后的逻辑：只针对独立的 Tag 进行精确替换
+    prompt_tags = [t.strip() for t in prompt.split(',')]
+    processed_tags = [hotwords[t] if t in hotwords else t for t in prompt_tags]
+    prompt = ", ".join(processed_tags)
     
     conditioning = compel(prompt, negative_prompt=negative_prompt)
     
