@@ -11,8 +11,7 @@ ollama_path = "C:\\Users\\Tony\\应用\\ollama-ipex-llm\\"
 ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
 negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
 hotwords = {
-    'Airki':'1girl,white hair,blue eyes,cat ears',
-    'airki':'1girl,white hair,blue eyes,cat ears',
+    'AIRKI': '1girl,white hair,blue eyes,cat ears',
     }
 # --- 配置区 ---
 
@@ -42,6 +41,10 @@ pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.vae.to(torch.float32)
 pipe = pipe.to("xpu")
+
+# 设置内存格式为 channels_last
+pipe.unet.to(memory_format=torch.channels_last)
+pipe.vae.decoder.to(memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
 
@@ -76,7 +79,7 @@ if __name__ == "__main__":
             prompt = prompt.split('seed')[0] + ','.join(prompt.split('seed')[1].split(',')[1:])
         else:
             seed = randint(0, MAX_SEED)
-        for word in hotwords:
-            if word in map(str.strip,prompt.split(',')):
-                prompt = prompt.replace(word,hotwords[word])
+        prompt_tags = [t.strip() for t in prompt.split(',')]
+        processed_tags = [hotwords[t.upper()] if t.upper() in hotwords else t for t in prompt_tags]
+        prompt = ",".join(processed_tags)
         draw(prompt, seed)

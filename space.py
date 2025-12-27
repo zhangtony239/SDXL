@@ -98,7 +98,7 @@ def infer(
     # 改进后的逻辑：只针对独立的 Tag 进行精确替换
     prompt_tags = [t.strip() for t in prompt.split(',')]
     processed_tags = [hotwords[t.upper()] if t.upper() in hotwords else t for t in prompt_tags]
-    prompt = ", ".join(processed_tags)
+    prompt = ",".join(processed_tags)
     
     with torch.inference_mode():
         conditioning = compel(prompt, negative_prompt=negative_prompt)
