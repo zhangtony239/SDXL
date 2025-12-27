@@ -53,10 +53,14 @@ if torch.cuda.is_available():
     scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
     pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
     pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
-    
-    # 全局初始化 Compel
-    compel = CompelForSDXL(pipe=pipe)
     pipe.to("cuda")
+
+    # 设置内存格式为 channels_last
+    pipe.unet.to(memory_format=torch.channels_last)
+    pipe.vae.decoder.to(memory_format=torch.channels_last)
+
+    # 初始化 Compel
+    compel = CompelForSDXL(pipe=pipe)
 
 def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
     if randomize_seed:
@@ -90,21 +94,22 @@ def infer(
     processed_tags = [hotwords[t.upper()] if t.upper() in hotwords else t for t in prompt_tags]
     prompt = ", ".join(processed_tags)
     
-    conditioning = compel(prompt, negative_prompt=negative_prompt)
-    
-    # 在调用 pipe 时，使用新的参数名称（确保参数名称正确）
-    image = pipe(
-        prompt_embeds=conditioning.embeds,
-        pooled_prompt_embeds=conditioning.pooled_embeds,
-        negative_prompt_embeds=conditioning.negative_embeds,
-        negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
-        width=width,
-        height=height,
-        guidance_scale=guidance_scale,
-        num_inference_steps=num_inference_steps,
-        generator=generator,
-        use_resolution_binning=use_resolution_binning,
-    ).images[0] # pyright: ignore[reportAttributeAccessIssue]
+    with torch.inference_mode():
+        conditioning = compel(prompt, negative_prompt=negative_prompt)
+        
+        # 在调用 pipe 时，使用新的参数名称（确保参数名称正确）
+        image = pipe(
+            prompt_embeds=conditioning.embeds,
+            pooled_prompt_embeds=conditioning.pooled_embeds,
+            negative_prompt_embeds=conditioning.negative_embeds,
+            negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
+            width=width,
+            height=height,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            generator=generator,
+            use_resolution_binning=use_resolution_binning,
+        ).images[0] # pyright: ignore[reportAttributeAccessIssue]
 
     # Create metadata dictionary
     metadata = {
