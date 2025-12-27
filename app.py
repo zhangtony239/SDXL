@@ -24,6 +24,12 @@ if len(ollama_info.splitlines()) > 1:
         subprocess.run(ollama_path+"ollama stop "+name)
         print('Stopped '+name)
 
+def vae_forward_wrapper(original_forward):
+    def wrapper(sample, *args, **kwargs):
+        # 强制将输入转为 float32
+        return original_forward(sample.to(dtype=torch.float32), *args, **kwargs)
+    return wrapper
+
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
@@ -31,8 +37,10 @@ pipe = StableDiffusionXLPipeline.from_single_file(
 )
 scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
-pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
+pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
+pipe.vae.enable_tiling() # 解锁更高分辨率
+pipe.vae.to(torch.float32)
 pipe = pipe.to("xpu")
 
 compel = CompelForSDXL(pipe=pipe)

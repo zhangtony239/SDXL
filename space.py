@@ -31,6 +31,12 @@ def add_metadata_to_image(image, metadata):
     buffer.seek(0)
     return Image.open(buffer)
 
+def vae_forward_wrapper(original_forward):
+    def wrapper(sample, *args, **kwargs):
+        # 强制将输入转为 float32
+        return original_forward(sample.to(dtype=torch.float32), *args, **kwargs)
+    return wrapper
+
 if not torch.cuda.is_available():
     DESCRIPTION = "\n<p>你现在运行在CPU上 但是此项目只支持GPU.</p>"
 
@@ -38,7 +44,6 @@ MAX_SEED = np.iinfo(np.int32).max
 MAX_IMAGE_SIZE = 2048
 
 if torch.cuda.is_available():
-    # vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
     model_path = hf_hub_download(
         repo_id="dsfkjlweuyr/miaomiaoRealskin",  # 模型仓库名称（非完整URL）
         filename="miaomiaoRealskin_vPredV11.safetensors",
@@ -46,13 +51,14 @@ if torch.cuda.is_available():
     )
     pipe = StableDiffusionXLPipeline.from_single_file(
         model_path,
-        #vae=vae, 内置VAE
         use_safetensors=True,
         torch_dtype=torch.float16,
     )
     scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
     pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
     pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
+    pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
+    pipe.vae.to(torch.float32)
     pipe.to("cuda")
 
     # 设置内存格式为 channels_last
