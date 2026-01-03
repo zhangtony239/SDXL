@@ -19,7 +19,7 @@ hotwords = {
 def add_metadata_to_image(image, metadata):
     # 构建符合 A1111 规范的字符串，这样别人下载你的图能直接“一键导入”
     meta_text = f"{metadata['prompt']}\nNegative prompt: {metadata['negative_prompt']}\n"
-    meta_text += f"Steps: {metadata['num_inference_steps']}, Sampler: Eular A, "
+    meta_text += f"Steps: {metadata['num_inference_steps']}, Sampler: Eular a, "
     meta_text += f"CFG scale: {metadata['guidance_scale']}, Seed: {metadata['seed']}, "
     meta_text += f"Size: {metadata['width']}x{metadata['height']}, Model: {metadata['model']}"
     
@@ -85,6 +85,7 @@ def infer(
     num_inference_steps: int = 30,
     randomize_seed: bool = True,
     use_resolution_binning: bool = True,
+    num_images_per_prompt: int = 4,
     _=gr.Progress(track_tqdm=True),
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
@@ -115,6 +116,7 @@ def infer(
             num_inference_steps=num_inference_steps,
             generator=generator,
             use_resolution_binning=use_resolution_binning,
+            num_images_per_prompt=num_images_per_prompt,
         ).images[0] # pyright: ignore[reportAttributeAccessIssue]
 
     # Create metadata dictionary
@@ -204,6 +206,13 @@ with gr.Blocks(css=css) as demo:
                 maximum=50,
                 step=1,
                 value=30,
+            )
+            num_images_per_prompt = gr.Slider(
+                label="并行生成数量",
+                minimum=1,
+                maximum=16,
+                step=1,
+                value=4,
             )
 
     use_negative_prompt.change(
