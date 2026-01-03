@@ -234,6 +234,7 @@ with gr.Blocks(css=css) as demo:
             guidance_scale,
             num_inference_steps,
             randomize_seed,
+            num_images_per_prompt,
         ],
         outputs=[result, seed],
     )
