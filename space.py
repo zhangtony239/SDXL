@@ -85,7 +85,6 @@ def infer(
     num_inference_steps: int = 30,
     randomize_seed: bool = True,
     use_resolution_binning: bool = True,
-    num_images_per_prompt: int = 4,
     _=gr.Progress(track_tqdm=True),
 ):
     seed = int(randomize_seed_fn(seed, randomize_seed))
@@ -116,7 +115,6 @@ def infer(
             num_inference_steps=num_inference_steps,
             generator=generator,
             use_resolution_binning=use_resolution_binning,
-            num_images_per_prompt=num_images_per_prompt,
         ).images[0] # pyright: ignore[reportAttributeAccessIssue]
 
     # Create metadata dictionary
@@ -194,7 +192,7 @@ with gr.Blocks(css=css) as demo:
             )
         with gr.Row():
             guidance_scale = gr.Slider(
-                label="提示词相关性",
+                label="提示词引导程度",
                 minimum=0.1,
                 maximum=10,
                 step=0.1,
@@ -206,13 +204,6 @@ with gr.Blocks(css=css) as demo:
                 maximum=50,
                 step=1,
                 value=30,
-            )
-            num_images_per_prompt = gr.Slider(
-                label="并行生成数量",
-                minimum=1,
-                maximum=16,
-                step=1,
-                value=4,
             )
 
     use_negative_prompt.change(
@@ -234,7 +225,6 @@ with gr.Blocks(css=css) as demo:
             guidance_scale,
             num_inference_steps,
             randomize_seed,
-            num_images_per_prompt,
         ],
         outputs=[result, seed],
     )
