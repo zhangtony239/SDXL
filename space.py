@@ -158,8 +158,6 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google 
             with gr.Group():
                 with gr.Row():
                     prompt = gr.Text(
-                        label="关键词",
-                        show_label=True,
                         max_lines=5,
                         placeholder="输入你要的图片关键词",
                         container=False,
