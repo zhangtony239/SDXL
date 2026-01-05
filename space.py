@@ -146,7 +146,7 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks(css=css) as demo:
+with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo: # type: ignore
     with gr.Row():
         with gr.Column(scale=7):
             with gr.Group():
