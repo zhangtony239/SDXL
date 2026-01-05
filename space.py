@@ -136,12 +136,9 @@ def infer(
     return image_with_metadata, seed
 
 css = '''
-.gradio-container {
-}
-h1{text-align:center}
 .tagpage{
     width: 100%;
-    height: 85vh;
+    height: 90vh;
 }
 '''
 

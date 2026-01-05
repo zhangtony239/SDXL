@@ -5,13 +5,9 @@ MAX_SEED = np.iinfo(np.int32).max
 MAX_IMAGE_SIZE = 2048
 
 css = '''
-.gradio-container {
-    max-width: 100vw !important;
-}
-h1{text-align:center}
 .tagpage{
     width: 100%;
-    height: 85vh;
+    height: 90vh;
 }
 '''
 
