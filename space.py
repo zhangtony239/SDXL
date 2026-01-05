@@ -142,9 +142,16 @@ css = '''
     margin-right: auto !important;
 }
 h1{text-align:center}
+.tagpage{
+    width: 70vw;
+}
 '''
 
-with gr.Blocks(css=css) as demo:
+tagpage = '''
+<iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
+'''
+
+with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
     with gr.Group():
         with gr.Row():
             prompt = gr.Text(
