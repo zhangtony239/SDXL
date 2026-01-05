@@ -152,6 +152,7 @@ tagpage = '''
 '''
 
 with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
+    gr.HTML(tagpage)
     with gr.Group():
         with gr.Row():
             prompt = gr.Text(
