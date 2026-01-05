@@ -5,9 +5,12 @@ MAX_SEED = np.iinfo(np.int32).max
 MAX_IMAGE_SIZE = 2048
 
 css = '''
+footer{
+    display: none;
+}
 .tagpage{
     width: 100%;
-    height: 90vh;
+    height: 95vh;
 }
 '''
 
@@ -30,7 +33,7 @@ with gr.Blocks(css=css) as demo:
                         placeholder="输入你要的图片关键词",
                         container=False,
                     )
-                    run_button = gr.Button("生成", scale=0, variant="primary")
+                    run_button = gr.Button("生成", variant="primary")
                 result = gr.Image(label="Result", show_label=False, format="png")
             with gr.Accordion("高级选项", open=False):
                 with gr.Row():

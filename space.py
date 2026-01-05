@@ -136,9 +136,12 @@ def infer(
     return image_with_metadata, seed
 
 css = '''
+footer{
+    display: none;
+}
 .tagpage{
     width: 100%;
-    height: 90vh;
+    height: 95vh;
 }
 '''
 
@@ -146,7 +149,7 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo: # type: ignore
+with gr.Blocks(css=css) as demo:
     with gr.Row():
         with gr.Column(scale=7):
             with gr.Group():
@@ -161,7 +164,7 @@ with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo: # type: ignore
                         placeholder="输入你要的图片关键词",
                         container=False,
                     )
-                    run_button = gr.Button("生成", scale=0, variant="primary")
+                    run_button = gr.Button("生成", variant="primary")
                 result = gr.Image(label="Result", show_label=False, format="png")
             with gr.Accordion("高级选项", open=False):
                 with gr.Row():
