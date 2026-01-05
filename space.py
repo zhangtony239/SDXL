@@ -137,7 +137,7 @@ def infer(
 
 css = '''
 footer{
-    display: none;
+    display: none !important;
 }
 .tagpage{
     width: 100%;

@@ -6,7 +6,7 @@ MAX_IMAGE_SIZE = 2048
 
 css = '''
 footer{
-    display: none;
+    display: none !important;
 }
 .tagpage{
     width: 100%;
