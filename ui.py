@@ -1,18 +1,41 @@
 import gradio as gr
+import numpy as np
 
-with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
-    gr.HTML(tagpage)
-    with gr.Group():
-        with gr.Row():
-            prompt = gr.Text(
-                label="关键词",
-                show_label=True,
-                max_lines=5,
-                placeholder="输入你要的图片关键词",
-                container=False,
-            )
-            run_button = gr.Button("生成", scale=0, variant="primary")
-        result = gr.Image(label="Result", show_label=False, format="png")
+MAX_SEED = np.iinfo(np.int32).max
+MAX_IMAGE_SIZE = 2048
+
+css = '''
+.gradio-container {
+    max-width: 100vw !important;
+}
+h1{text-align:center}
+.tagpage{
+    width: 100%;
+    height: 85vh;
+}
+'''
+
+tagpage = '''
+<iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
+'''
+
+with gr.Blocks(css=css) as demo:
+    with gr.Row():
+        with gr.Column(scale=7):
+            with gr.Group():
+                gr.HTML(value=tagpage)
+        with gr.Column(scale=3):
+            with gr.Group():
+                with gr.Row():
+                    prompt = gr.Text(
+                        label="关键词",
+                        show_label=True,
+                        max_lines=5,
+                        placeholder="输入你要的图片关键词",
+                        container=False,
+                    )
+                    run_button = gr.Button("生成", scale=0, variant="primary")
+                result = gr.Image(label="Result", show_label=False, format="png")
     with gr.Accordion("高级选项", open=False):
         with gr.Row():
             use_negative_prompt = gr.Checkbox(label="使用反向词条", value=True)
@@ -69,6 +92,7 @@ with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
         outputs=negative_prompt,
     )
 
+'''
     gr.on(
         triggers=[prompt.submit, run_button.click],
         fn=infer,
@@ -85,6 +109,7 @@ with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
         ],
         outputs=[result, seed],
     )
+'''
 
 if __name__ == "__main__":
-    demo.launch(ssr_mode=True)
+    demo.launch()

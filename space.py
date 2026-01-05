@@ -1,5 +1,5 @@
 import random
-import gradio as gr # type: ignore
+import gradio as gr
 import numpy as np
 import spaces # type: ignore
 import torch
@@ -137,13 +137,11 @@ def infer(
 
 css = '''
 .gradio-container {
-    max-width: 560px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
 }
 h1{text-align:center}
 .tagpage{
-    width: 70vw;
+    width: 100%;
+    height: 85vh;
 }
 '''
 
@@ -151,19 +149,23 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
-    gr.HTML(tagpage)
-    with gr.Group():
-        with gr.Row():
-            prompt = gr.Text(
-                label="关键词",
-                show_label=True,
-                max_lines=5,
-                placeholder="输入你要的图片关键词",
-                container=False,
-            )
-            run_button = gr.Button("生成", scale=0, variant="primary")
-        result = gr.Image(label="Result", show_label=False, format="png")
+with gr.Blocks(css=css) as demo:
+    with gr.Row():
+        with gr.Column(scale=7):
+            with gr.Group():
+                gr.HTML(value=tagpage)
+        with gr.Column(scale=3):
+            with gr.Group():
+                with gr.Row():
+                    prompt = gr.Text(
+                        label="关键词",
+                        show_label=True,
+                        max_lines=5,
+                        placeholder="输入你要的图片关键词",
+                        container=False,
+                    )
+                    run_button = gr.Button("生成", scale=0, variant="primary")
+                result = gr.Image(label="Result", show_label=False, format="png")
     with gr.Accordion("高级选项", open=False):
         with gr.Row():
             use_negative_prompt = gr.Checkbox(label="使用反向词条", value=True)
@@ -218,23 +220,6 @@ with gr.Blocks(css=css,theme=gr.themes.Soft()) as demo:
         fn=lambda x: gr.update(visible=x),
         inputs=use_negative_prompt,
         outputs=negative_prompt,
-    )
-
-    gr.on(
-        triggers=[prompt.submit, run_button.click],
-        fn=infer,
-        inputs=[
-            prompt,
-            negative_prompt,
-            use_negative_prompt,
-            seed,
-            width,
-            height,
-            guidance_scale,
-            num_inference_steps,
-            randomize_seed,
-        ],
-        outputs=[result, seed],
     )
 
 if __name__ == "__main__":
