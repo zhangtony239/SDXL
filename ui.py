@@ -12,9 +12,6 @@ css = '''
     -ms-overflow-style: none !important;  /* IE and Edge */
     scrollbar-width: none !important;  /* Firefox */
 }
-.gradio-container{
-    background-color: #0f172a;
-}
 footer{
     display: none !important;
 }
