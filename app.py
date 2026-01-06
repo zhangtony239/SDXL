@@ -9,6 +9,7 @@ from random import randint
 # --- 配置区 ---
 ollama_path = "C:\\Users\\Tony\\应用\\ollama-ipex-llm\\"
 ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
+output_path = "C:\\Users\\Tony\\Downloads\\"
 negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
 hotwords = {
     'AIRKI': '1girl,white hair,blue eyes,cat ears',
@@ -67,7 +68,7 @@ def draw(prompt,seed):
         generator=torch.Generator().manual_seed(seed),
     ).images[0] # pyright: ignore[reportAttributeAccessIssue]
     
-    image.save(f"{seed}.png")
+    image.save(f"{output_path}{seed}.png")
 
 if __name__ == "__main__":
     while True:
