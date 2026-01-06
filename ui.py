@@ -31,7 +31,7 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks(css=css) as demo:
+with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column(scale=7):
             with gr.Group():
@@ -123,4 +123,4 @@ with gr.Blocks(css=css) as demo:
 '''
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(css=css)

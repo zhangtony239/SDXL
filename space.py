@@ -162,7 +162,7 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks(css=css, theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google Sans Flex"), "system-ui"])) as demo: # type: ignore
+with gr.Blocks() as demo: # type: ignore
     with gr.Row():
         with gr.Column(scale=7):
             with gr.Group():
@@ -250,4 +250,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google 
     )
 
 if __name__ == "__main__":
-    demo.launch(ssr_mode=True)
+    demo.launch(
+        css=css,
+        theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google Sans Flex"), "system-ui"]), # type: ignore
+        ssr_mode=True
+    )
