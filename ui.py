@@ -5,12 +5,25 @@ MAX_SEED = np.iinfo(np.int32).max
 MAX_IMAGE_SIZE = 2048
 
 css = '''
+::-webkit-scrollbar {
+    display: none !important;
+}
+* {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
+}
+.gradio-container{
+    background-color: #0f172a;
+}
 footer{
     display: none !important;
 }
 .tagpage{
     width: 100%;
     height: 95vh;
+}
+.submit{
+    min-width: 2em;
 }
 '''
 
@@ -25,36 +38,27 @@ with gr.Blocks(css=css) as demo:
                 gr.HTML(value=tagpage)
         with gr.Column(scale=3):
             with gr.Group():
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     prompt = gr.Text(
                         label="关键词",
                         show_label=True,
                         max_lines=5,
                         placeholder="输入你要的图片关键词",
                         container=False,
+                        scale=9,
                     )
-                    run_button = gr.Button("生成", variant="primary")
+                    run_button = gr.Button("生成", scale=1, elem_classes='submit', variant="primary")
                 result = gr.Image(label="Result", show_label=False, format="png")
             with gr.Accordion("高级选项", open=False):
-                with gr.Row():
+                with gr.Group():
                     use_negative_prompt = gr.Checkbox(label="使用反向词条", value=True)
                     negative_prompt = gr.Text(
-                        label="反向词条",
+                        container=False,
                         max_lines=5,
-                        lines=4,
                         placeholder="输入你要排除的图片关键词",
                         value="worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
-                        visible=True,
                     )
-                seed = gr.Slider(
-                    label="种子",
-                    minimum=0,
-                    maximum=MAX_SEED,
-                    step=1,
-                    value=0,
-                )
-                randomize_seed = gr.Checkbox(label="随机种子", value=True)
-                with gr.Row(visible=True):
+                with gr.Column():
                     width = gr.Slider(
                         label="宽度",
                         minimum=512,
@@ -69,9 +73,17 @@ with gr.Blocks(css=css) as demo:
                         step=64,
                         value=1536,
                     )
-                with gr.Row():
+                seed = gr.Slider(
+                    label="种子",
+                    minimum=0,
+                    maximum=MAX_SEED,
+                    step=1,
+                    value=0,
+                )
+                randomize_seed = gr.Checkbox(label="随机种子", value=True)
+                with gr.Column():
                     guidance_scale = gr.Slider(
-                        label="提示词引导程度",
+                        label="引导强度",
                         minimum=0.1,
                         maximum=10,
                         step=0.1,
