@@ -154,7 +154,7 @@ footer{
     height: 95vh;
 }
 .submit{
-    min-width: 2em;
+    min-width: 6em;
 }
 '''
 
