@@ -12,9 +12,6 @@ css = '''
     -ms-overflow-style: none !important;  /* IE and Edge */
     scrollbar-width: none !important;  /* Firefox */
 }
-:root .dark{
-    --background-fill-primary: #0F172A;
-}
 footer{
     display: none !important;
 }
