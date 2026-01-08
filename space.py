@@ -1,7 +1,8 @@
+# pyright: reportMissingImports=false
 import random
 import gradio as gr
 import numpy as np
-import spaces # type: ignore
+import spaces
 import torch
 import os
 from huggingface_hub import hf_hub_download
@@ -49,7 +50,7 @@ if torch.cuda.is_available():
     model_path = hf_hub_download(
         repo_id="dsfkjlweuyr/miaomiaoRealskin",  # 模型仓库名称（非完整URL）
         filename="miaomiaoRealskin_vPredV11.safetensors",
-        use_auth_token=os.environ.get("HF_TOKEN") # type: ignore
+        token=os.environ.get("HF_TOKEN")
     )
     pipe = StableDiffusionXLPipeline.from_single_file(
         model_path,
@@ -161,7 +162,7 @@ tagpage = '''
 <iframe class='tagpage' src='https://magic-tag.netlify.app/#'></iframe>
 '''
 
-with gr.Blocks() as demo: # type: ignore
+with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column(scale=7):
             with gr.Group():
@@ -232,7 +233,7 @@ with gr.Blocks() as demo: # type: ignore
     )
 
     gr.on(
-        triggers=[prompt.submit, run_button.click], # type: ignore
+        triggers=[prompt.submit, run_button.click],
         fn=infer,
         inputs=[
             prompt,
@@ -251,6 +252,6 @@ with gr.Blocks() as demo: # type: ignore
 if __name__ == "__main__":
     demo.launch(
         css=css,
-        theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google Sans Flex"), "system-ui"]), # type: ignore
+        theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google Sans Flex"), "system-ui"]),
         ssr_mode=True
     )
