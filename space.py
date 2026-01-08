@@ -44,7 +44,7 @@ if not torch.cuda.is_available():
     DESCRIPTION = "\n<p>你现在运行在CPU上 但是此项目只支持GPU.</p>"
 
 MAX_SEED = np.iinfo(np.int32).max
-MAX_IMAGE_SIZE = 2048
+MAX_IMAGE_SIZE = 4096
 
 if torch.cuda.is_available():
     model_path = hf_hub_download(
