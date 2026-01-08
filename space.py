@@ -11,6 +11,8 @@ from compel import CompelForSDXL
 from PIL import Image, PngImagePlugin
 import io
 
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
+
 hotwords = {
     'AIRKI':'1girl,white hair,blue eyes,cat ears',
     }
@@ -73,7 +75,7 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
         seed = random.randint(0, MAX_SEED)
     return seed
 
-@spaces.GPU
+@spaces.GPU(duration=10)
 def infer(
     prompt: str,
     negative_prompt: str = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
