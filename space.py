@@ -44,7 +44,7 @@ if not torch.cuda.is_available():
     DESCRIPTION = "\n<p>你现在运行在CPU上 但是此项目只支持GPU.</p>"
 
 MAX_SEED = np.iinfo(np.int32).max
-MAX_IMAGE_SIZE = 4096
+MAX_IMAGE_SIZE = 2048
 
 if torch.cuda.is_available():
     model_path = hf_hub_download(
@@ -76,7 +76,7 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
         seed = random.randint(0, MAX_SEED)
     return seed
 
-@spaces.GPU(duration=10)
+@spaces.GPU(duration=5)
 def infer(
     prompt: str,
     negative_prompt: str = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
