@@ -76,7 +76,7 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
         seed = random.randint(0, MAX_SEED)
     return seed
 
-@spaces.GPU(duration=5)
+@spaces.GPU(duration=10)
 def infer(
     prompt: str,
     negative_prompt: str = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,",
@@ -253,5 +253,6 @@ if __name__ == "__main__":
     demo.launch(
         css=css,
         theme=gr.themes.Soft(font=[gr.themes.GoogleFont("Google Sans Flex"), "system-ui"]),
-        ssr_mode=True
+        ssr_mode=True,
+        share=False,
     )
