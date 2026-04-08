@@ -33,6 +33,7 @@ def vae_forward_wrapper(original_forward):
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
+    low_cpu_mem_usage=True,
     torch_dtype=torch.float16
 )
 scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
