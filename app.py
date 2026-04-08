@@ -1,5 +1,4 @@
 import torch
-import subprocess
 import numpy as np
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
@@ -7,7 +6,7 @@ from compel import CompelForSDXL
 from random import randint
 
 # --- 配置区 ---
-ollama_path = "C:\\Users\\Tony\\应用\\ollama-ipex-llm\\"
+#ollama_path = "C:\\Users\\Tony\\应用\\ollama-ipex-llm\\"
 ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
 output_path = "C:\\Users\\Tony\\Downloads\\"
 negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
@@ -16,6 +15,7 @@ hotwords = {
     }
 # --- 配置区 ---
 
+'''Ollama 暂不常驻
 ollama_info = subprocess.run(ollama_path+"ollama ps", text=True, capture_output=True).stdout
 if len(ollama_info.splitlines()) > 1:
     print("Detected Ollama's model alive, stopping...")
@@ -23,7 +23,7 @@ if len(ollama_info.splitlines()) > 1:
         name = info.split(' ')[0]
         subprocess.run(ollama_path+"ollama stop "+name)
         print('Stopped '+name)
-
+'''
 def vae_forward_wrapper(original_forward):
     def wrapper(sample, *args, **kwargs):
         # 强制将输入转为 float32
