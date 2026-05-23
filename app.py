@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
-#from diffusers.schedulers.scheduling_dpmsolver_multistep import DPMSolverMultistepScheduler
 from compel import CompelForSDXL
 from random import randint
 
@@ -30,7 +29,6 @@ pipe = StableDiffusionXLPipeline.from_single_file(
 )
 scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
-#pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config, **scheduler_args)
 pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
 pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
 pipe.vae.enable_tiling() # 解锁更高分辨率
@@ -50,18 +48,19 @@ def draw(prompt,seed):
 
     print(f"Current seed: {seed}")
 
-    image = pipe(
-        prompt_embeds=conditioning.embeds,
-        pooled_prompt_embeds=conditioning.pooled_embeds,
-        negative_prompt_embeds=conditioning.negative_embeds,
-        negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
-        width=1024,
-        height=1536,
-        num_inference_steps=30,
-        guidance_scale=5,
-        generator=torch.Generator(device="cpu").manual_seed(seed),
-    ).images[0] # pyright: ignore[reportAttributeAccessIssue]
-    
+    with torch.inference_mode():
+        image = pipe(
+            prompt_embeds=conditioning.embeds,
+            pooled_prompt_embeds=conditioning.pooled_embeds,
+            negative_prompt_embeds=conditioning.negative_embeds,
+            negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
+            width=1024,
+            height=1536,
+            num_inference_steps=30,
+            guidance_scale=5,
+            generator=torch.Generator(device="cpu").manual_seed(seed),
+        ).images[0] # type: ignore
+        
     image.save(f"{output_path}{seed}.png")
 
 if __name__ == "__main__":
