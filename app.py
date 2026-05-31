@@ -65,10 +65,14 @@ def draw(prompt,seed):
 
 if __name__ == "__main__":
     while True:
-        prompt = input("Prompt: ").strip()
+        try:
+            prompt = input("Prompt: ").strip()
+        except KeyboardInterrupt:
+            print()
+            continue
         if prompt in ['Q','q','exit']:
             break
-        if len(prompt.split('seed')) > 1:
+        elif len(prompt.split('seed')) > 1:
             seed = int(prompt.split('seed')[1].split(',')[0][1:])
             prompt = prompt.split('seed')[0] + ','.join(prompt.split('seed')[1].split(',')[1:])
         else:
