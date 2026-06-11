@@ -142,7 +142,6 @@ if __name__ == "__main__":
         try:
             prompts = prompt("Prompt: ", completer=completer).strip()
         except KeyboardInterrupt:
-            print()
             continue
         if prompts in ['Q','q','exit']:
             break
@@ -154,4 +153,8 @@ if __name__ == "__main__":
         prompt_tags = [t.strip() for t in prompts.split(',')]
         processed_tags = [hotwords[t.lower()] if t.lower() in hotwords else t for t in prompt_tags]
         prompts = ",".join(processed_tags)
-        draw(prompts, seed)
+        try:
+            draw(prompts, seed)
+        except KeyboardInterrupt:
+            print("Drawing cancelled.")
+            continue
