@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import transformers
 from diffusers.utils import logging
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
@@ -26,6 +27,7 @@ def vae_forward_wrapper(original_forward):
 
 # 简化diffusers日志
 logging.disable_progress_bar()
+transformers.utils.logging.set_verbosity_error()
 
 # TF32计算加速
 torch.set_float32_matmul_precision("high")
