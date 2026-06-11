@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from diffusers.utils import logging
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
 from compel import CompelForSDXL
@@ -20,7 +21,12 @@ def vae_forward_wrapper(original_forward):
         return original_forward(sample.to(dtype=torch.float32), *args, **kwargs)
     return wrapper
 
+# 简化diffusers日志
+logging.disable_progress_bar()
+
+# TF32计算加速
 torch.set_float32_matmul_precision("high")
+
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
