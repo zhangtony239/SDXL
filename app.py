@@ -8,6 +8,7 @@ from compel import CompelForSDXL
 from random import randint
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.history import InMemoryHistory
 import duckdb
 
 # --- 配置区 ---
@@ -24,6 +25,9 @@ def vae_forward_wrapper(original_forward):
         # 强制将输入转为 float32
         return original_forward(sample.to(dtype=torch.float32), *args, **kwargs)
     return wrapper
+
+# 初始化历史提示词缓存
+history = InMemoryHistory()
 
 # 简化diffusers日志
 logging.disable_progress_bar()
@@ -142,7 +146,7 @@ if __name__ == "__main__":
     
     while True:
         try:
-            prompts = prompt("Prompt: ", completer=completer).strip()
+            prompts = prompt("Prompt: ", completer=completer, history=history).strip()
         except KeyboardInterrupt:
             continue
         if prompts in ['Q','q','exit']:
