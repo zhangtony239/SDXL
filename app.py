@@ -1,4 +1,8 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import torch
+import duckdb
 import numpy as np
 import transformers
 from diffusers.utils import logging
@@ -9,7 +13,6 @@ from random import randint
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import InMemoryHistory
-import duckdb
 
 # --- 配置区 ---
 ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"

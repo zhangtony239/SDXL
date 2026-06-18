@@ -8,6 +8,7 @@ dependencies = [
     "accelerate>=1.13.0",
     "compel>=2.3.1",
     "diffusers>=0.37.1",
+    "dotenv>=0.9.9",
     "duckdb>=1.5.3",
     "prompt-toolkit>=3.0.52",
     "torch>=2.11.0",
@@ -18,3 +19,6 @@ dependencies = [
 
 [[tool.uv.index]]
 url = "https://download.pytorch.org/whl/xpu"
+
+[tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]
