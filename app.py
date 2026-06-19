@@ -15,9 +15,9 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import InMemoryHistory
 
 # --- 配置区 ---
-ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
-output_path = "C:\\Users\\Tony\\Downloads\\"
-negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
+ckpt_path = 'miaomiaoRealskin_vPredV11.safetensors'
+output_path = 'C:\\Users\\Tony\\Downloads\\'
+negative_prompt = 'worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,'
 hotwords = {
     'airki': '1girl,white hair,blue eyes,cat ears',
     }
@@ -37,25 +37,21 @@ logging.disable_progress_bar()
 transformers.utils.logging.set_verbosity_error()
 
 # TF32计算加速
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision('high')
 
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
-    low_cpu_mem_usage=True,
+    disable_mmap=True,
     torch_dtype=torch.float16
 )
-scheduler_args = {"prediction_type": "v_prediction", "rescale_betas_zero_snr": True}
+scheduler_args = {'prediction_type': 'v_prediction', 'rescale_betas_zero_snr': True}
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
 pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
 pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.vae.to(torch.float32)
-pipe = pipe.to("xpu")
-
-# 设置内存格式为 channels_last
-pipe.unet.to(memory_format=torch.channels_last)
-pipe.vae.decoder.to(memory_format=torch.channels_last)
+pipe = pipe.to('xpu')
 
 compel = CompelForSDXL(pipe=pipe)
 
@@ -64,7 +60,7 @@ MAX_SEED = np.iinfo(np.int32).max
 def draw(prompt,seed):
     conditioning = compel(prompt, negative_prompt=negative_prompt)
 
-    print(f"Current seed: {seed}")
+    print(f'Current seed: {seed}')
 
     with torch.inference_mode():
         image = pipe(
@@ -76,10 +72,10 @@ def draw(prompt,seed):
             height=1536,
             num_inference_steps=30,
             guidance_scale=5,
-            generator=torch.Generator(device="cpu").manual_seed(seed),
+            generator=torch.Generator(device='cpu').manual_seed(seed),
         ).images[0] # type: ignore
         
-    image.save(f"{output_path}{seed}.png")
+    image.save(f'{output_path}{seed}.png')
 
 class CommaSeparatedCompleter(Completer):
     def __init__(self, words):
@@ -119,11 +115,11 @@ class CommaSeparatedCompleter(Completer):
                     if count >= 20:
                         break
 
-if __name__ == "__main__":
-    print("Loading tags database...")
+if __name__ == '__main__':
+    print('Loading tags database...')
     try:
         db = duckdb.connect()
-        query = """
+        query = '''
             SELECT tag FROM (
                 SELECT character AS tag, count FROM read_csv('tags/danbooru_character.csv', ignore_errors=true) WHERE count >= 100
                 UNION ALL
@@ -133,15 +129,15 @@ if __name__ == "__main__":
             )
             GROUP BY tag
             ORDER BY MAX(count) DESC
-        """
+        '''
         results = db.execute(query).fetchall()
         tags = [row[0] for row in results]
         # 合并配置区 hotwords 的 key，并去重（保持 hotwords 优先级最高）
         hotword_keys = list(hotwords.keys())
         tags = hotword_keys + [tag for tag in tags if tag not in hotwords]
-        print(f"Loaded {len(tags)} tags for completion (including {len(hotword_keys)} hotwords).")
+        print(f'Loaded {len(tags)} tags for completion (including {len(hotword_keys)} hotwords).')
     except Exception as e:
-        print(f"Failed to load tags database: {e}")
+        print(f'Failed to load tags database: {e}')
         # 如果加载失败，至少保留 hotwords 的 key
         tags = list(hotwords.keys())
         
@@ -149,7 +145,7 @@ if __name__ == "__main__":
     
     while True:
         try:
-            prompts = prompt("Prompt: ", completer=completer, history=history).strip()
+            prompts = prompt('Prompt: ', completer=completer, history=history).strip()
         except KeyboardInterrupt:
             continue
         if prompts in ['Q','q','exit']:
@@ -161,9 +157,9 @@ if __name__ == "__main__":
             seed = randint(0, MAX_SEED)
         prompt_tags = [t.strip() for t in prompts.split(',')]
         processed_tags = [hotwords[t.lower()] if t.lower() in hotwords else t for t in prompt_tags]
-        prompts = ",".join(processed_tags)
+        prompts = ','.join(processed_tags)
         try:
             draw(prompts, seed)
         except KeyboardInterrupt:
-            print("Drawing cancelled.")
+            print('Drawing cancelled.')
             continue
