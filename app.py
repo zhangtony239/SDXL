@@ -51,7 +51,7 @@ pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
 pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.vae.to(torch.float32)
-pipe = pipe.to('xpu')
+pipe = pipe.to('xpu', memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
 
