@@ -8,10 +8,11 @@ import transformers
 from diffusers.utils import logging
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
 from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
+from torch.amp.autocast_mode import autocast
 from compel import CompelForSDXL
 from random import randint
+from tags.TagCompleter import TagCompleter
 from prompt_toolkit import prompt
-from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.history import InMemoryHistory
 
 # --- 配置区 ---
@@ -22,15 +23,6 @@ hotwords = {
     'airki': '1girl,white hair,blue eyes,cat ears',
     }
 # --- 配置区 ---
-
-def vae_forward_wrapper(original_forward):
-    def wrapper(sample, *args, **kwargs):
-        # 强制将输入转为 float32
-        return original_forward(sample.to(dtype=torch.float32), *args, **kwargs)
-    return wrapper
-
-# 初始化历史提示词缓存
-history = InMemoryHistory()
 
 # 简化diffusers日志
 logging.disable_progress_bar()
@@ -47,14 +39,14 @@ pipe = StableDiffusionXLPipeline.from_single_file(
 )
 scheduler_args = {'prediction_type': 'v_prediction', 'rescale_betas_zero_snr': True}
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
-pipe.text_encoder.config.num_hidden_layers -= 2 # CLIP skip: 2
-pipe.vae.decode = vae_forward_wrapper(pipe.vae.decode)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.vae.to(torch.float32)
 pipe = pipe.to('xpu', memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
+history = InMemoryHistory()
 
+gen = torch.Generator(device='cpu')
 MAX_SEED = np.iinfo(np.int32).max
 
 def draw(prompt,seed):
@@ -63,57 +55,29 @@ def draw(prompt,seed):
     print(f'Current seed: {seed}')
 
     with torch.inference_mode():
-        image = pipe(
+        # Ksample去噪阶段
+        latent = pipe(
             prompt_embeds=conditioning.embeds,
             pooled_prompt_embeds=conditioning.pooled_embeds,
             negative_prompt_embeds=conditioning.negative_embeds,
             negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
+            clip_skip=2,
             width=1024,
             height=1536,
             num_inference_steps=30,
             guidance_scale=5,
-            generator=torch.Generator(device='cpu').manual_seed(seed),
-        ).images[0] # type: ignore
-        
-    image.save(f'{output_path}{seed}.png')
+            generator=gen.manual_seed(seed),
+            output_type='latent'
+        ).images # type: ignore # 这里的images实则返回的是latent内容
 
-class CommaSeparatedCompleter(Completer):
-    def __init__(self, words):
-        self.words = words
+        # VAE解码阶段
+        latent = latent / pipe.vae.config.scaling_factor
+        with autocast(device_type='xpu'):
+            image_tensor = pipe.vae.decode(latent).sample
+        image = pipe.image_processor.postprocess(image_tensor)[0] # type: ignore
+        
+    image.save(f'{output_path}{seed}.png') # type: ignore
 
-    def get_completions(self, document, complete_event):
-        text = document.text_before_cursor
-        parts = text.split(',')
-        if not parts:
-            return
-        
-        current_part = parts[-1]
-        current_word = current_part.lstrip()
-        start_position = -len(current_word)
-        
-        if not current_word:
-            return
-            
-        count = 0
-        prefix_matches = []
-        
-        # 1. 前缀匹配
-        for word in self.words:
-            if word.lower().startswith(current_word.lower()):
-                prefix_matches.append(word)
-                yield Completion(word, start_position=start_position)
-                count += 1
-                if count >= 20:
-                    break
-                    
-        # 2. 包含匹配
-        if count < 20:
-            for word in self.words:
-                if word not in prefix_matches and current_word.lower() in word.lower():
-                    yield Completion(word, start_position=start_position)
-                    count += 1
-                    if count >= 20:
-                        break
 
 if __name__ == '__main__':
     print('Loading tags database...')
@@ -141,7 +105,7 @@ if __name__ == '__main__':
         # 如果加载失败，至少保留 hotwords 的 key
         tags = list(hotwords.keys())
         
-    completer = CommaSeparatedCompleter(tags)
+    completer = TagCompleter(tags)
     
     while True:
         try:
