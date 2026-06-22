@@ -1,18 +1,6 @@
+from tqdm import tqdm
 from dotenv import load_dotenv
 load_dotenv()
-
-import torch
-import numpy as np
-import transformers
-from diffusers.utils import logging
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
-from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
-from torch.amp.autocast_mode import autocast
-from compel import CompelForSDXL
-from random import randint
-from tags.TagCompleter import init_tags
-from prompt_toolkit import prompt
-from prompt_toolkit.history import InMemoryHistory
 
 # --- 配置区 ---
 ckpt_path = 'miaomiaoRealskin_vPredV11.safetensors'
@@ -22,6 +10,33 @@ hotwords = {
     'airki': '1girl,white hair,blue eyes,cat ears',
     }
 # --- 配置区 ---
+
+with tqdm(total=12, desc='Importing dependencies') as pbar:
+    import torch
+    pbar.update()
+    import numpy as np
+    pbar.update()
+    import transformers
+    pbar.update()
+    from diffusers.utils import logging
+    pbar.update()
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    pbar.update()
+    from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
+    pbar.update()
+    from torch.amp.autocast_mode import autocast
+    pbar.update()
+    from compel import CompelForSDXL
+    pbar.update()
+    from random import randint
+    pbar.update()
+    from tags.TagCompleter import init_tags
+    pbar.update()
+    from prompt_toolkit import prompt
+    pbar.update()
+    from prompt_toolkit.history import InMemoryHistory
+    pbar.update()
+
 
 # 简化diffusers日志
 logging.disable_progress_bar()
@@ -35,6 +50,7 @@ def xpu_sync_callback(*args, **kwargs):
     torch.xpu.synchronize()
     return args[-1]
 
+print('Initializing pipeline...', end='')
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
