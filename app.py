@@ -7,7 +7,7 @@ import numpy as np
 import transformers
 from diffusers.utils import logging
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
-from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncestralDiscreteScheduler
+from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
 from torch.amp.autocast_mode import autocast
 from compel import CompelForSDXL
 from random import randint
@@ -31,14 +31,23 @@ transformers.utils.logging.set_verbosity_error()
 # TF32计算加速
 torch.set_float32_matmul_precision('high')
 
+# 解决xpu异步太激进导致的tqdm脱钩问题
+def xpu_sync_callback(*args, **kwargs):
+    torch.xpu.synchronize()
+    return args[-1]
+
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
     disable_mmap=True,
-    torch_dtype=torch.float16
+    torch_dtype=torch.float16,
 )
-scheduler_args = {'prediction_type': 'v_prediction', 'rescale_betas_zero_snr': True}
-pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
+scheduler_args = {
+    'prediction_type': 'v_prediction',
+    'rescale_betas_zero_snr': True,
+    'use_exponential_sigmas': True
+}
+pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
 pipe.vae.enable_tiling() # 解锁更高分辨率
 pipe.vae.to(torch.float32)
 pipe = pipe.to('xpu', memory_format=torch.channels_last)
@@ -46,7 +55,7 @@ pipe = pipe.to('xpu', memory_format=torch.channels_last)
 compel = CompelForSDXL(pipe=pipe)
 history = InMemoryHistory()
 
-gen = torch.Generator(device='cpu')
+gen = torch.Generator(device='xpu')
 MAX_SEED = np.iinfo(np.int32).max
 
 def draw(prompt,seed):
@@ -61,11 +70,12 @@ def draw(prompt,seed):
             pooled_prompt_embeds=conditioning.pooled_embeds,
             negative_prompt_embeds=conditioning.negative_embeds,
             negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
+            callback_on_step_end=xpu_sync_callback,
             clip_skip=2,
             width=1024,
             height=1536,
             num_inference_steps=30,
-            guidance_scale=5,
+            guidance_scale=3.8,
             generator=gen.manual_seed(seed),
             output_type='latent'
         ).images # type: ignore # 这里的images实则返回的是latent内容
