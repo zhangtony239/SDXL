@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import torch
-import duckdb
 import numpy as np
 import transformers
 from diffusers.utils import logging
@@ -11,7 +10,7 @@ from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteSchedule
 from torch.amp.autocast_mode import autocast
 from compel import CompelForSDXL
 from random import randint
-from tags.TagCompleter import TagCompleter
+from tags.TagCompleter import init_tags
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
 
@@ -54,6 +53,7 @@ pipe = pipe.to('xpu', memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
 history = InMemoryHistory()
+completer = init_tags(hotwords=hotwords)
 
 gen = torch.Generator(device='xpu')
 MAX_SEED = np.iinfo(np.int32).max
@@ -90,33 +90,6 @@ def draw(prompt,seed):
 
 
 if __name__ == '__main__':
-    print('Loading tags database...')
-    try:
-        db = duckdb.connect()
-        query = '''
-            SELECT tag FROM (
-                SELECT character AS tag, count FROM read_csv('tags/danbooru_character.csv', ignore_errors=true) WHERE count >= 100
-                UNION ALL
-                SELECT character AS tag, count FROM read_csv('tags/e621_character.csv', ignore_errors=true) WHERE count >= 100
-                UNION ALL
-                SELECT tags AS tag, count FROM read_csv('tags/danbooru_e621_merged.csv', ignore_errors=true) WHERE count >= 100
-            )
-            GROUP BY tag
-            ORDER BY MAX(count) DESC
-        '''
-        results = db.execute(query).fetchall()
-        tags = [row[0] for row in results]
-        # 合并配置区 hotwords 的 key，并去重（保持 hotwords 优先级最高）
-        hotword_keys = list(hotwords.keys())
-        tags = hotword_keys + [tag for tag in tags if tag not in hotwords]
-        print(f'Loaded {len(tags)} tags for completion (including {len(hotword_keys)} hotwords).')
-    except Exception as e:
-        print(f'Failed to load tags database: {e}')
-        # 如果加载失败，至少保留 hotwords 的 key
-        tags = list(hotwords.keys())
-        
-    completer = TagCompleter(tags)
-    
     while True:
         try:
             prompts = prompt('Prompt: ', completer=completer, history=history).strip()
