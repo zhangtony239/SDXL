@@ -63,8 +63,6 @@ scheduler_args = {
     'use_exponential_sigmas': True
 }
 pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
-pipe.vae.enable_tiling() # 解锁更高分辨率
-pipe.vae.to(torch.float32)
 pipe = pipe.to('xpu', memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
