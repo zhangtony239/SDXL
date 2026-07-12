@@ -11,7 +11,7 @@ hotwords = {
     }
 # --- 配置区 ---
 
-with tqdm(total=12, desc='Importing dependencies') as pbar:
+with tqdm(total=11, desc='Importing dependencies') as pbar:
     import torch
     pbar.update()
     import numpy as np
@@ -23,8 +23,6 @@ with tqdm(total=12, desc='Importing dependencies') as pbar:
     from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
     pbar.update()
     from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
-    pbar.update()
-    from torch.amp.autocast_mode import autocast
     pbar.update()
     from compel import CompelForSDXL
     pbar.update()
@@ -63,6 +61,8 @@ scheduler_args = {
     'use_exponential_sigmas': True
 }
 pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
+pipe.vae.enable_tiling()
+pipe.vae.to(torch.float32)
 pipe = pipe.to('xpu', memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
@@ -96,9 +96,8 @@ def draw(prompt,seed):
         ).images # type: ignore # 这里的images实则返回的是latent内容
 
         # VAE解码阶段
-        latent = latent / pipe.vae.config.scaling_factor
-        with autocast(device_type='xpu'):
-            image_tensor = pipe.vae.decode(latent).sample
+        latent = latent.to(pipe.vae.dtype) / pipe.vae.config.scaling_factor # type: ignore
+        image_tensor = pipe.vae.decode(latent).sample
         image = pipe.image_processor.postprocess(image_tensor)[0] # type: ignore
         
     image.save(f'{output_path}{seed}.png') # type: ignore
