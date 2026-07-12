@@ -54,7 +54,7 @@ print('Initializing pipeline...', end='')
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
-    disable_mmap=True,
+    disable_mmap=True, # 解决toC平台SSD拖后腿的问题
     torch_dtype=torch.float16,
 )
 scheduler_args = {
@@ -73,11 +73,12 @@ gen = torch.Generator(device='xpu')
 MAX_SEED = np.iinfo(np.int32).max
 
 def draw(prompt,seed):
-    conditioning = compel(prompt, negative_prompt=negative_prompt)
-
     print(f'Current seed: {seed}')
 
     with torch.inference_mode():
+        # Embedding构建阶段
+        conditioning = compel(prompt, negative_prompt=negative_prompt)
+
         # Ksample去噪阶段
         latent = pipe(
             prompt_embeds=conditioning.embeds,
