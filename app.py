@@ -1,5 +1,6 @@
-from tqdm import tqdm
 from dotenv import load_dotenv
+from tqdm import tqdm
+
 load_dotenv()
 
 # --- 配置区 ---
@@ -20,7 +21,9 @@ with tqdm(total=11, desc='Importing dependencies') as pbar:
     pbar.update()
     from diffusers.utils import logging
     pbar.update()
-    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline
+    from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+        StableDiffusionXLPipeline,
+    )
     pbar.update()
     from diffusers.schedulers.scheduling_euler_discrete import EulerDiscreteScheduler
     pbar.update()
@@ -117,7 +120,7 @@ if __name__ == '__main__':
         else:
             seed = randint(0, MAX_SEED)
         prompt_tags = [t.strip() for t in prompts.split(',')]
-        processed_tags = [hotwords[t.lower()] if t.lower() in hotwords else t for t in prompt_tags]
+        processed_tags = [hotwords.get(t.lower(), t) for t in prompt_tags]
         prompts = ','.join(processed_tags)
         try:
             draw(prompts, seed)
