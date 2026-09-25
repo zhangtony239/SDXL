@@ -10,6 +10,7 @@ negative_prompt = 'worst quality,bad quality,simple_background,low quality,jpeg 
 hotwords = {
     'airki': '1girl,white hair,blue eyes,cat ears',
     }
+landscape = False
 # --- 配置区 ---
 
 with tqdm(total=11, desc='Importing dependencies') as pbar:
@@ -75,6 +76,8 @@ completer = init_tags(hotwords=hotwords)
 gen = torch.Generator(device='xpu')
 MAX_SEED = np.iinfo(np.int32).max
 
+height,width = (1024,1536) if landscape else (1536,1024)
+
 def draw(prompt,seed):
     print(f'Current seed: {seed}')
 
@@ -90,8 +93,8 @@ def draw(prompt,seed):
             negative_pooled_prompt_embeds=conditioning.negative_pooled_embeds,
             callback_on_step_end=xpu_sync_callback,
             clip_skip=2,
-            width=1024,
-            height=1536,
+            width=width,
+            height=height,
             num_inference_steps=30,
             guidance_scale=3.8,
             generator=gen.manual_seed(seed),
