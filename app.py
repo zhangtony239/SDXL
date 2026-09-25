@@ -4,16 +4,17 @@ from tqdm import tqdm
 load_dotenv()
 
 # --- 配置区 ---
-ckpt_path = 'miaomiaoRealskin_vPredV11.safetensors'
-output_path = 'C:\\Users\\Tony\\Downloads\\'
-negative_prompt = 'worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,'
+ckpt_path = "miaomiaoRealskin_vPredV11.safetensors"
+output_path = "C:\\Users\\Tony\\Downloads\\"
+negative_prompt = "worst quality,bad quality,simple_background,low quality,jpeg artifacts,old,oldest,signature,shiny_skin,bad hands,bad feet,"
 hotwords = {
-    'airki': '1girl,white hair,blue eyes,cat ears',
-    }
+    "airki": "1girl,white hair,blue eyes,cat ears",
+}
 landscape = False
 # --- 配置区 ---
 
-with tqdm(total=11, desc='Importing dependencies') as pbar:
+# fmt: off
+with tqdm(total=11, desc="Importing dependencies") as pbar:
     import torch
     pbar.update()
     import numpy as np
@@ -38,6 +39,7 @@ with tqdm(total=11, desc='Importing dependencies') as pbar:
     pbar.update()
     from prompt_toolkit.history import InMemoryHistory
     pbar.update()
+# fmt:on
 
 
 # 简化diffusers日志
@@ -45,41 +47,46 @@ logging.disable_progress_bar()
 transformers.utils.logging.set_verbosity_error()
 
 # TF32计算加速
-torch.set_float32_matmul_precision('high')
+torch.set_float32_matmul_precision("high")
+
 
 # 解决xpu异步太激进导致的tqdm脱钩问题
 def xpu_sync_callback(*args, **kwargs):
     torch.xpu.synchronize()
     return args[-1]
 
-print('Initializing pipeline...', end='')
+
+print("Initializing pipeline...", end="")
 pipe = StableDiffusionXLPipeline.from_single_file(
     ckpt_path,
     use_safetensors=True,
-    disable_mmap=True, # 解决toC平台SSD拖后腿的问题
+    disable_mmap=True,  # 解决toC平台SSD拖后腿的问题
     torch_dtype=torch.float16,
 )
 scheduler_args = {
-    'prediction_type': 'v_prediction',
-    'rescale_betas_zero_snr': True,
-    'use_exponential_sigmas': True
+    "prediction_type": "v_prediction",
+    "rescale_betas_zero_snr": True,
+    "use_exponential_sigmas": True,
 }
-pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, **scheduler_args)
+pipe.scheduler = EulerDiscreteScheduler.from_config(
+    pipe.scheduler.config, **scheduler_args
+)
 pipe.vae.enable_tiling()
 pipe.vae.to(torch.float32)
-pipe = pipe.to('xpu', memory_format=torch.channels_last)
+pipe = pipe.to("xpu", memory_format=torch.channels_last)
 
 compel = CompelForSDXL(pipe=pipe)
 history = InMemoryHistory()
 completer = init_tags(hotwords=hotwords)
 
-gen = torch.Generator(device='xpu')
+gen = torch.Generator(device="xpu")
 MAX_SEED = np.iinfo(np.int32).max
 
-height,width = (1024,1536) if landscape else (1536,1024)
+height, width = (1024, 1536) if landscape==True else (1536, 1024)
 
-def draw(prompt,seed):
-    print(f'Current seed: {seed}')
+
+def draw(prompt, seed):
+    print(f"Current seed: {seed}")
 
     with torch.inference_mode():
         # Embedding构建阶段
@@ -98,35 +105,37 @@ def draw(prompt,seed):
             num_inference_steps=30,
             guidance_scale=3.8,
             generator=gen.manual_seed(seed),
-            output_type='latent'
-        ).images # type: ignore # 这里的images实则返回的是latent内容
+            output_type="latent",
+        ).images  # type: ignore # 这里的images实则返回的是latent内容
 
         # VAE解码阶段
-        latent = latent.to(pipe.vae.dtype) / pipe.vae.config.scaling_factor # type: ignore
+        latent = latent.to(pipe.vae.dtype) / pipe.vae.config.scaling_factor  # type: ignore
         image_tensor = pipe.vae.decode(latent).sample
-        image = pipe.image_processor.postprocess(image_tensor)[0] # type: ignore
-        
-    image.save(f'{output_path}{seed}.png') # type: ignore
+        image = pipe.image_processor.postprocess(image_tensor)[0]  # type: ignore
+
+    image.save(f"{output_path}{seed}.png")  # type: ignore
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     while True:
         try:
-            prompts = prompt('Prompt: ', completer=completer, history=history).strip()
+            prompts = prompt("Prompt: ", completer=completer, history=history).strip()
         except KeyboardInterrupt:
             continue
-        if prompts in ['Q','q','exit']:
+        if prompts in ["Q", "q", "exit"]:
             break
-        elif len(prompts.split('seed')) > 1:
-            seed = int(prompts.split('seed')[1].split(',')[0][1:])
-            prompts = prompts.split('seed')[0] + ','.join(prompts.split('seed')[1].split(',')[1:])
+        elif len(prompts.split("seed")) > 1:
+            seed = int(prompts.split("seed")[1].split(",")[0][1:])
+            prompts = prompts.split("seed")[0] + ",".join(
+                prompts.split("seed")[1].split(",")[1:]
+            )
         else:
             seed = randint(0, MAX_SEED)
-        prompt_tags = [t.strip() for t in prompts.split(',')]
+        prompt_tags = [t.strip() for t in prompts.split(",")]
         processed_tags = [hotwords.get(t.lower(), t) for t in prompt_tags]
-        prompts = ','.join(processed_tags)
+        prompts = ",".join(processed_tags)
         try:
             draw(prompts, seed)
         except KeyboardInterrupt:
-            print('Drawing cancelled.')
+            print("Drawing cancelled.")
             continue
