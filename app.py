@@ -82,7 +82,7 @@ completer = init_tags(hotwords=hotwords)
 gen = torch.Generator(device="xpu")
 MAX_SEED = np.iinfo(np.int32).max
 
-height, width = (1024, 1536) if landscape==True else (1536, 1024)
+height, width = (1024, 1536) if landscape == True else (1536, 1024)
 
 
 def draw(prompt, seed):
